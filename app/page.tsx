@@ -27,7 +27,7 @@ function parseWhatsApp(text: string, profileName: string) {
   const profileMsgs = messages.filter(m => m.sender === profileSender);
   const avgLen = profileMsgs.length > 0
     ? Math.round(profileMsgs.reduce((s, m) => s + m.text.length, 0) / profileMsgs.length) : 0;
-  const hours = {};
+ const hours: Record<number, number> = {};
   for (const m of profileMsgs) {
     const h = parseInt(m.time.split(":")[0]);
     hours[h] = (hours[h] || 0) + 1;
