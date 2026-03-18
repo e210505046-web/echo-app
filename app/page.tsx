@@ -4,30 +4,30 @@ import { useState, useRef, useEffect } from "react";
 
 function parseWhatsApp(text: string, profileName: string) {
   const lines = text.split("\n");
-  const msgRegex = /^(\d{1,2}[.\/]\d{1,2}[.\/]\d{2,4})[,\s]+(\d{1,2}:\d{2})(?::\d{2})?(?:\s?[AP]M)?\s*[-–]\s*(.+?):\s*(.+)$/;
-  const messages = [];
+  const msgRegex = /^(\d{1,2}[./]\d{1,2}[./]\d{2,4})[,\s]+(\d{1,2}:\d{2})(?::\d{2})?(?:\s?[AP]M)?\s*[-–]\s*(.+?):\s*(.+)$/;
+  const messages: { date: string; time: string; sender: string; text: string }[] = [];
   for (const line of lines) {
     const m = line.match(msgRegex);
     if (m) messages.push({ date: m[1], time: m[2], sender: m[3].trim(), text: m[4].trim() });
   }
   if (messages.length === 0) return null;
- const senders: Record<string, number> = {};
+  const senders: Record<string, number> = {};
   for (const m of messages) { senders[m.sender] = (senders[m.sender] || 0) + 1; }
   const sortedSenders = Object.entries(senders).sort((a, b) => b[1] - a[1]);
   const totalMsgs = messages.length;
   const profileSender = sortedSenders.find(([s]) =>
     s.toLowerCase().includes(profileName.toLowerCase()) ||
     profileName.toLowerCase().includes(s.toLowerCase().split(" ")[0])
-  )?.[0] || sortedSenders[0]?.[0];
-  const youSender = sortedSenders.find(([s]) => s !== profileSender)?.[0];
+  )?.[0] || sortedSenders[0]?.[0] || "";
+  const youSender = sortedSenders.find(([s]) => s !== profileSender)?.[0] || "";
   const profileCount = senders[profileSender] || 0;
- const youCount = senders[youSender ?? ""] || 0;
-  const firstDate = messages[0]?.date;
-  const lastDate = messages[messages.length - 1]?.date;
+  const youCount = senders[youSender] || 0;
+  const firstDate = messages[0]?.date || "";
+  const lastDate = messages[messages.length - 1]?.date || "";
   const profileMsgs = messages.filter(m => m.sender === profileSender);
   const avgLen = profileMsgs.length > 0
     ? Math.round(profileMsgs.reduce((s, m) => s + m.text.length, 0) / profileMsgs.length) : 0;
- const hours: Record<number, number> = {};
+  const hours: Record<number, number> = {};
   for (const m of profileMsgs) {
     const h = parseInt(m.time.split(":")[0]);
     hours[h] = (hours[h] || 0) + 1;
@@ -42,9 +42,20 @@ function parseWhatsApp(text: string, profileName: string) {
   return { totalMsgs, profileCount, youCount, profileSender, youSender, firstDate, lastDate, avgLen, peakLabel, sampleTexts, ratio: totalMsgs > 0 ? Math.round((profileCount / totalMsgs) * 100) : 0 };
 }
 
-const SAMPLE_PROFILES = [
-  { id: 1, name: "Ahmet", emoji: "👨", relationship: "Arkadaş", description: "10 yıllık arkadaşım. Biraz egoist ama sadık biri. Üniversiteden tanışıyoruz. Sporu sever, basketbol. Duygularını çok belli etmez ama önemseyen biri.", color: "#E8956D", waStats: { totalMsgs: 4832, profileCount: 2201, youCount: 2631, firstDate: "12.03.2019", lastDate: "04.03.2026", avgLen: 38, peakLabel: "22:00 akşam", ratio: 46, profileSender: "Ahmet", sampleTexts: "" } },
-  { id: 2, name: "Elif", emoji: "👩", relationship: "Eski sevgili", description: "3 yıl beraberdik, 6 ay önce ayrıldık. Çok zeki ve analitik. Müziğe bayılır. Kızgın olunca suskunlaşır.", color: "#7EB8C9", waStats: { totalMsgs: 12480, profileCount: 6102, youCount: 6378, firstDate: "08.06.2022", lastDate: "14.09.2025", avgLen: 62, peakLabel: "23:00 akşam", ratio: 49, profileSender: "Elif", sampleTexts: "" } }
+interface WaStats {
+  totalMsgs: number; profileCount: number; youCount: number;
+  profileSender: string; youSender: string; firstDate: string;
+  lastDate: string; avgLen: number; peakLabel: string | null;
+  sampleTexts: string; ratio: number;
+}
+interface Profile {
+  id: number; name: string; emoji: string; relationship: string;
+  description: string; color: string; waStats: WaStats | null;
+}
+
+const SAMPLE_PROFILES: Profile[] = [
+  { id: 1, name: "Ahmet", emoji: "👨", relationship: "Arkadaş", description: "10 yıllık arkadaşım. Biraz egoist ama sadık biri.", color: "#E8956D", waStats: { totalMsgs: 4832, profileCount: 2201, youCount: 2631, firstDate: "12.03.2019", lastDate: "04.03.2026", avgLen: 38, peakLabel: "22:00 akşam", ratio: 46, profileSender: "Ahmet", youSender: "Sen", sampleTexts: "" } },
+  { id: 2, name: "Elif", emoji: "👩", relationship: "Eski sevgili", description: "3 yıl beraberdik, 6 ay önce ayrıldık. Çok zeki ve analitik.", color: "#7EB8C9", waStats: { totalMsgs: 12480, profileCount: 6102, youCount: 6378, firstDate: "08.06.2022", lastDate: "14.09.2025", avgLen: 62, peakLabel: "23:00 akşam", ratio: 49, profileSender: "Elif", youSender: "Sen", sampleTexts: "" } }
 ];
 
 const VIEWS = { HOME: "home", PROFILE: "profile", ADD: "add", CHAT: "chat" };
@@ -62,7 +73,7 @@ const MODES = [
 const EMOJIS = ["👤","👨","👩","👴","👵","👦","👧","🧑","👨‍💼","👩‍💼","🧔","👱"];
 const COLORS = ["#9B8EC4","#E8956D","#7EB8C9","#E88E8E","#7EC9A0","#C9B87E","#E87EB8","#7E9BC9"];
 
-function Avatar({ emoji, color, size = 48 }) {
+function Avatar({ emoji, color, size = 48 }: { emoji: string; color: string; size?: number }) {
   return (
     <div style={{ width: size, height: size, borderRadius: "50%", background: `radial-gradient(circle at 30% 30%, ${color}88, ${color}44)`, border: `2px solid ${color}66`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.45, flexShrink: 0, boxShadow: `0 0 20px ${color}33` }}>
       {emoji}
@@ -70,7 +81,7 @@ function Avatar({ emoji, color, size = 48 }) {
   );
 }
 
-function TypewriterText({ text, speed = 15 }) {
+function TypewriterText({ text, speed = 15 }: { text: string; speed?: number }) {
   const [displayed, setDisplayed] = useState("");
   const [done, setDone] = useState(false);
   useEffect(() => {
@@ -80,11 +91,11 @@ function TypewriterText({ text, speed = 15 }) {
       else { clearInterval(iv); setDone(true); }
     }, speed);
     return () => clearInterval(iv);
-  }, [text]);
+  }, [text, speed]);
   return <span>{displayed}{!done && <span style={{ opacity: 0.5 }}>▋</span>}</span>;
 }
 
-function StatPill({ label, value, color }) {
+function StatPill({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
     <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "12px 10px", textAlign: "center" }}>
       <div style={{ fontSize: 16, fontWeight: 300, color: color || textC }}>{value}</div>
@@ -93,21 +104,23 @@ function StatPill({ label, value, color }) {
   );
 }
 
-function WaUploadBox({ profile, onUploadDone }) {
+function WaUploadBox({ profile, onUploadDone }: { profile: Profile; onUploadDone: (s: WaStats) => void }) {
   const [dragging, setDragging] = useState(false);
   const [parsing, setParsing] = useState(false);
-  const [error, setError] = useState(null);
-  const fileRef = useRef();
+  const [error, setError] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  function handleFile(file) {
+  function handleFile(file: File | null | undefined) {
     if (!file) return;
     if (!file.name.endsWith(".txt")) { setError("Lütfen .txt formatında WhatsApp dışa aktarımı yükle."); return; }
     setParsing(true); setError(null);
     const reader = new FileReader();
     reader.onload = (e) => {
-      const stats = parseWhatsApp(e.target.result, profile.name);
+      const result = e.target?.result;
+      if (typeof result !== "string") return;
+      const stats = parseWhatsApp(result, profile.name);
       setParsing(false);
-      if (!stats || stats.totalMsgs < 5) { setError("Mesaj bulunamadı. WhatsApp → Sohbeti Dışa Aktar → Medyasız seçeneğini dene."); return; }
+      if (!stats || stats.totalMsgs < 5) { setError("Mesaj bulunamadı."); return; }
       onUploadDone(stats);
     };
     reader.readAsText(file, "UTF-8");
@@ -115,19 +128,16 @@ function WaUploadBox({ profile, onUploadDone }) {
 
   return (
     <div style={{ marginTop: 16 }}>
-      <div
-        onClick={() => fileRef.current.click()}
+      <div onClick={() => fileRef.current?.click()}
         onDragOver={e => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
         onDrop={e => { e.preventDefault(); setDragging(false); handleFile(e.dataTransfer.files[0]); }}
         style={{ border: `2px dashed ${dragging ? accent : border}`, borderRadius: 14, padding: "28px 20px", textAlign: "center", cursor: "pointer", background: dragging ? `${accent}11` : "rgba(255,255,255,0.02)", transition: "all 0.2s" }}>
         <div style={{ fontSize: 32, marginBottom: 10 }}>{parsing ? "⏳" : "📁"}</div>
         <div style={{ fontSize: 14, color: "#C0C0D0" }}>{parsing ? "Analiz ediliyor..." : "WhatsApp .txt dosyasını sürükle veya tıkla"}</div>
-        <div style={{ fontSize: 11, color: muted, marginTop: 8, lineHeight: 1.6 }}>
-          WhatsApp → Sohbet → ⋮ Menü → Sohbeti Dışa Aktar → Medyasız
-        </div>
+        <div style={{ fontSize: 11, color: muted, marginTop: 8, lineHeight: 1.6 }}>WhatsApp → Sohbet → ⋮ Menü → Sohbeti Dışa Aktar → Medyasız</div>
       </div>
-      <input ref={fileRef} type="file" accept=".txt" style={{ display: "none" }} onChange={e => handleFile(e.target.files[0])} />
+      <input ref={fileRef} type="file" accept=".txt" style={{ display: "none" }} onChange={e => handleFile(e.target.files?.[0])} />
       {error && <div style={{ fontSize: 12, color: "#E88E8E", marginTop: 10, textAlign: "center" }}>{error}</div>}
     </div>
   );
@@ -135,44 +145,40 @@ function WaUploadBox({ profile, onUploadDone }) {
 
 export default function EchoApp() {
   const [view, setView] = useState(VIEWS.HOME);
-  const [profiles, setProfiles] = useState(SAMPLE_PROFILES);
-  const [activeProfile, setActiveProfile] = useState(null);
-  const [chatMessages, setChatMessages] = useState([]);
+  const [profiles, setProfiles] = useState<Profile[]>(SAMPLE_PROFILES);
+  const [activeProfile, setActiveProfile] = useState<Profile | null>(null);
+  const [chatMessages, setChatMessages] = useState<{ role: string; content: string }[]>([]);
   const [inputVal, setInputVal] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [chatMode, setChatMode] = useState("ask");
   const [newProfile, setNewProfile] = useState({ name: "", relationship: "", description: "", emoji: "👤", color: "#9B8EC4" });
   const [showUpload, setShowUpload] = useState(false);
-  const chatEndRef = useRef(null);
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [chatMessages]);
 
-  function updateProfile(id, patch) {
+  function updateProfile(id: number, patch: Partial<Profile>) {
     setProfiles(prev => prev.map(p => p.id === id ? { ...p, ...patch } : p));
     setActiveProfile(prev => prev?.id === id ? { ...prev, ...patch } : prev);
   }
 
   async function sendMessage() {
-    if (!inputVal.trim() || isLoading) return;
+    if (!inputVal.trim() || isLoading || !activeProfile) return;
     const userMsg = inputVal.trim();
     setInputVal("");
     const newUserMsg = { role: "user", content: userMsg };
     setChatMessages(prev => [...prev, newUserMsg]);
     setIsLoading(true);
     const stats = activeProfile.waStats;
-    const waCtx = stats ? `\n\nWhatsApp verileri: ${stats.totalMsgs} mesaj, ${stats.firstDate}–${stats.lastDate}. ${activeProfile.name} mesajların %${stats.ratio}'ini gönderdi. Ort. mesaj uzunluğu: ${stats.avgLen} kr. En aktif: ${stats.peakLabel}.${stats.sampleTexts ? `\n\nÖrnek mesajlar:\n${stats.sampleTexts}` : ""}` : "";
-    const systemPrompts = {
-      ask: `Sen "${activeProfile.name}" adlı kişiyi tanıyan AI asistansın.\nTanım: ${activeProfile.description}${waCtx}\nSoruları içgörüyle yanıtla. Türkçe, kısa ve samimi ol.`,
-      simulate: `Sen "${activeProfile.name}" adlı kişisin.\nKişilik: ${activeProfile.description}${waCtx}\nBu kişi gibi düşün ve yaz. WhatsApp tarzı kısa mesaj. Türkçe.`,
-      advice: `Sen ilişki danışmanısın. "${activeProfile.name}": ${activeProfile.description}${waCtx}\nEmpatiyle dinle, pratik tavsiye ver. Türkçe, sıcak ol.`
+    const waCtx = stats ? `\n\nWhatsApp: ${stats.totalMsgs} mesaj, ${stats.firstDate}–${stats.lastDate}. %${stats.ratio} gönderdi.` : "";
+    const systemPrompts: Record<string, string> = {
+      ask: `Sen "${activeProfile.name}" adlı kişiyi tanıyan AI asistansın.\nTanım: ${activeProfile.description}${waCtx}\nTürkçe, kısa ve samimi ol.`,
+      simulate: `Sen "${activeProfile.name}" adlı kişisin.\nKişilik: ${activeProfile.description}${waCtx}\nBu kişi gibi yaz. WhatsApp tarzı kısa mesaj. Türkçe.`,
+      advice: `Sen ilişki danışmanısın. "${activeProfile.name}": ${activeProfile.description}${waCtx}\nEmpatiyle dinle, pratik tavsiye ver. Türkçe.`
     };
     try {
       const history = [...chatMessages, newUserMsg].map(m => ({ role: m.role, content: m.content }));
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ system: systemPrompts[chatMode], messages: history })
-      });
+      const res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ system: systemPrompts[chatMode], messages: history }) });
       const data = await res.json();
       setChatMessages(prev => [...prev, { role: "assistant", content: data.content || "Bir hata oluştu." }]);
     } catch {
@@ -181,12 +187,12 @@ export default function EchoApp() {
     setIsLoading(false);
   }
 
-  function openChat(profile, mode) {
+  function openChat(profile: Profile, mode?: string) {
     setActiveProfile(profile);
     const m = mode || chatMode;
     setChatMode(m);
     const s = profile.waStats;
-    setChatMessages([{ role: "assistant", content: `${profile.name} profilini açtın.${s ? ` ${s.totalMsgs.toLocaleString()} mesajı analiz ettim — ${s.firstDate}'den bu yana.` : ""} Ne öğrenmek istersin?` }]);
+    setChatMessages([{ role: "assistant", content: `${profile.name} profilini açtın.${s ? ` ${s.totalMsgs.toLocaleString()} mesajı analiz ettim.` : ""} Ne öğrenmek istersin?` }]);
     setView(VIEWS.CHAT);
   }
 
@@ -197,8 +203,8 @@ export default function EchoApp() {
     setView(VIEWS.HOME);
   }
 
-  const baseStyle = { minHeight: "100vh", background: bg, color: textC, fontFamily: "'Georgia', serif", display: "flex", flexDirection: "column", alignItems: "center", padding: "0 16px 48px" };
-  const inp = { width: "100%", background: card, border: `1px solid ${border}`, borderRadius: 12, padding: "14px 16px", color: textC, fontSize: 15, outline: "none", boxSizing: "border-box", fontFamily: "inherit" };
+  const baseStyle: React.CSSProperties = { minHeight: "100vh", background: bg, color: textC, fontFamily: "'Georgia', serif", display: "flex", flexDirection: "column", alignItems: "center", padding: "0 16px 48px" };
+  const inp: React.CSSProperties = { width: "100%", background: card, border: `1px solid ${border}`, borderRadius: 12, padding: "14px 16px", color: textC, fontSize: 15, outline: "none", boxSizing: "border-box", fontFamily: "inherit" };
 
   if (view === VIEWS.HOME) return (
     <div style={baseStyle}>
@@ -216,18 +222,15 @@ export default function EchoApp() {
         {profiles.map((p, i) => (
           <div key={p.id} onClick={() => { setActiveProfile(p); setShowUpload(false); setView(VIEWS.PROFILE); }}
             style={{ background: card, border: `1px solid ${border}`, borderRadius: 18, padding: "18px 20px", marginBottom: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 16, animation: `fadeUp 0.4s ease ${i * 0.08}s both`, transition: "border-color 0.2s" }}
-            onMouseEnter={e => e.currentTarget.style.borderColor = `${p.color}55`}
-            onMouseLeave={e => e.currentTarget.style.borderColor = border}>
+            onMouseEnter={e => (e.currentTarget.style.borderColor = `${p.color}55`)}
+            onMouseLeave={e => (e.currentTarget.style.borderColor = border)}>
             <Avatar emoji={p.emoji} color={p.color} />
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 17 }}>{p.name}</div>
               <div style={{ fontSize: 13, color: muted, marginTop: 3 }}>{p.relationship}</div>
-              {p.waStats && <div style={{ fontSize: 11, color: "#6B9E7A", marginTop: 5 }}>📊 {p.waStats.totalMsgs.toLocaleString()} mesaj · {p.waStats.firstDate} – {p.waStats.lastDate}</div>}
+              {p.waStats && <div style={{ fontSize: 11, color: "#6B9E7A", marginTop: 5 }}>📊 {p.waStats.totalMsgs.toLocaleString()} mesaj</div>}
             </div>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
-              {p.waStats && <div style={{ fontSize: 10, color: "#4CAF7E", background: "#4CAF7E1A", borderRadius: 10, padding: "2px 8px" }}>WA ✓</div>}
-              <div style={{ color: muted, fontSize: 18 }}>›</div>
-            </div>
+            <div style={{ color: muted, fontSize: 18 }}>›</div>
           </div>
         ))}
       </div>
@@ -254,12 +257,12 @@ export default function EchoApp() {
         {[{ key: "name", label: "İsim", ph: "Ahmet, Elif..." }, { key: "relationship", label: "İlişki", ph: "Arkadaş, Eski sevgili, Aile..." }].map(f => (
           <div key={f.key} style={{ marginBottom: 16 }}>
             <div style={{ fontSize: 11, color: muted, letterSpacing: 2, marginBottom: 8, textTransform: "uppercase" }}>{f.label}</div>
-            <input value={newProfile[f.key]} onChange={e => setNewProfile(p => ({...p, [f.key]: e.target.value}))} placeholder={f.ph} style={inp} />
+            <input value={newProfile[f.key as keyof typeof newProfile]} onChange={e => setNewProfile(p => ({...p, [f.key]: e.target.value}))} placeholder={f.ph} style={inp} />
           </div>
         ))}
         <div style={{ marginBottom: 28 }}>
           <div style={{ fontSize: 11, color: muted, letterSpacing: 2, marginBottom: 8, textTransform: "uppercase" }}>Bu kişiyi tanımla</div>
-          <textarea value={newProfile.description} onChange={e => setNewProfile(p => ({...p, description: e.target.value}))} placeholder="Bu kişi nasıl biri? Ne zaman tanıştınız? Karakteri nasıl?" rows={5} style={{ ...inp, resize: "none", lineHeight: 1.6 }} />
+          <textarea value={newProfile.description} onChange={e => setNewProfile(p => ({...p, description: e.target.value}))} placeholder="Bu kişi nasıl biri?" rows={5} style={{ ...inp, resize: "none", lineHeight: 1.6 }} />
         </div>
         <button onClick={addProfile} style={{ width: "100%", background: `linear-gradient(135deg, ${accent}, #7B6EF0)`, border: "none", borderRadius: 14, padding: "16px", color: "white", fontSize: 16, cursor: "pointer", fontFamily: "inherit" }}>Profili Oluştur</button>
       </div>
@@ -286,12 +289,12 @@ export default function EchoApp() {
             <div style={{ fontSize: 15, lineHeight: 1.8, color: "#C0C0D0" }}>{activeProfile.description}</div>
           </div>
           <div style={{ background: card, border: `1px solid ${border}`, borderRadius: 16, padding: "20px", marginBottom: 14 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: (stats && !showUpload) ? 18 : 0 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: stats && !showUpload ? 18 : 0 }}>
               <div>
                 <div style={{ fontSize: 10, color: accent, letterSpacing: 3, textTransform: "uppercase", marginBottom: 6 }}>WhatsApp Geçmişi</div>
-                <div style={{ fontSize: 14, color: stats ? "#4CAF7E" : muted }}>{stats ? `✓ ${stats.totalMsgs.toLocaleString()} mesaj analiz edildi` : "Henüz yüklenmedi"}</div>
+                <div style={{ fontSize: 14, color: stats ? "#4CAF7E" : muted }}>{stats ? `✓ ${stats.totalMsgs.toLocaleString()} mesaj` : "Henüz yüklenmedi"}</div>
               </div>
-              <button onClick={() => setShowUpload(v => !v)} style={{ background: stats ? "#4CAF7E22" : `${accent}22`, border: `1px solid ${stats ? "#4CAF7E55" : `${accent}55`}`, color: stats ? "#4CAF7E" : accent, borderRadius: 10, padding: "7px 16px", fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
+              <button onClick={() => setShowUpload(v => !v)} style={{ background: `${accent}22`, border: `1px solid ${accent}55`, color: accent, borderRadius: 10, padding: "7px 16px", fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
                 {showUpload ? "Kapat" : stats ? "Güncelle" : "Yükle"}
               </button>
             </div>
@@ -302,10 +305,6 @@ export default function EchoApp() {
                   <StatPill label={activeProfile.name} value={stats.profileCount.toLocaleString()} color={activeProfile.color} />
                   <StatPill label="Sen" value={stats.youCount.toLocaleString()} color="#7EC9A0" />
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
-                  <StatPill label="Ort. uzunluk" value={`${stats.avgLen} kr`} />
-                  {stats.peakLabel && <StatPill label="En aktif" value={stats.peakLabel} />}
-                </div>
                 <div style={{ fontSize: 11, color: muted, marginBottom: 8 }}>Konuşma oranı</div>
                 <div style={{ height: 6, background: "rgba(255,255,255,0.08)", borderRadius: 4, overflow: "hidden" }}>
                   <div style={{ height: "100%", width: `${stats.ratio}%`, background: `linear-gradient(90deg, ${activeProfile.color}, ${accent})`, borderRadius: 4 }} />
@@ -313,12 +312,9 @@ export default function EchoApp() {
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: muted, marginTop: 5 }}>
                   <span>{activeProfile.name} %{stats.ratio}</span><span>Sen %{100 - stats.ratio}</span>
                 </div>
-                <div style={{ fontSize: 11, color: muted, marginTop: 14, textAlign: "center" }}>📅 {stats.firstDate} → {stats.lastDate}</div>
               </div>
             )}
-            {showUpload && (
-              <WaUploadBox profile={activeProfile} onUploadDone={(s) => { updateProfile(activeProfile.id, { waStats: s }); setShowUpload(false); }} />
-            )}
+            {showUpload && <WaUploadBox profile={activeProfile} onUploadDone={(s) => { updateProfile(activeProfile.id, { waStats: s }); setShowUpload(false); }} />}
           </div>
           <div style={{ fontSize: 11, color: muted, letterSpacing: 3, textTransform: "uppercase", marginBottom: 12 }}>Mod Seç</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
