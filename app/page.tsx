@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 
-function parseWhatsApp(text, profileName) {
+function parseWhatsApp(text: string, profileName: string) {
   const lines = text.split("\n");
   const msgRegex = /^(\d{1,2}[.\/]\d{1,2}[.\/]\d{2,4})[,\s]+(\d{1,2}:\d{2})(?::\d{2})?(?:\s?[AP]M)?\s*[-–]\s*(.+?):\s*(.+)$/;
   const messages = [];
