@@ -11,7 +11,7 @@ function parseWhatsApp(text: string, profileName: string) {
     if (m) messages.push({ date: m[1], time: m[2], sender: m[3].trim(), text: m[4].trim() });
   }
   if (messages.length === 0) return null;
-  const senders = {};
+  const senders: Record<string, number> = {};
   for (const m of messages) { senders[m.sender] = (senders[m.sender] || 0) + 1; }
   const sortedSenders = Object.entries(senders).sort((a, b) => b[1] - a[1]);
   const totalMsgs = messages.length;
